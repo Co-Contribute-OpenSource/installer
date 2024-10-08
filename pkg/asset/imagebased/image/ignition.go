@@ -110,7 +110,10 @@ func (i *Ignition) Generate(_ context.Context, dependencies asset.Parents) error
 		Proxy:            ibiConfig.Proxy,
 		PullSecret:       ibiConfig.PullSecret,
 		IBIConfiguration: string(ibiConfigJSON),
-		NetworkConfig:    ibiConfig.NetworkConfig.String(),
+	}
+
+	if ibiConfig.NetworkConfig != nil {
+		ibiTemplateData.NetworkConfig = ibiConfig.NetworkConfig.String()
 	}
 
 	if len(registriesConf.Data) > 0 {
@@ -129,7 +132,7 @@ func (i *Ignition) Generate(_ context.Context, dependencies asset.Parents) error
 	}
 
 	if ibiConfig.IgnitionConfigOverride != "" {
-		if err := setIngnitionConfigOverride(config, ibiConfig.IgnitionConfigOverride); err != nil {
+		if err := setIgnitionConfigOverride(config, ibiConfig.IgnitionConfigOverride); err != nil {
 			return fmt.Errorf("failed to override ignition config: %w", err)
 		}
 	}
@@ -139,7 +142,7 @@ func (i *Ignition) Generate(_ context.Context, dependencies asset.Parents) error
 	}
 
 	enabledServices := defaultEnabledServices()
-	if ibiConfig.NetworkConfig.String() != "" {
+	if ibiConfig.NetworkConfig != nil && ibiConfig.NetworkConfig.String() != "" {
 		enabledServices = append(enabledServices, "network-config.service")
 	}
 	if err := bootstrap.AddSystemdUnits(config, "imagebased/systemd/units", ibiTemplateData, enabledServices); err != nil {
@@ -151,7 +154,7 @@ func (i *Ignition) Generate(_ context.Context, dependencies asset.Parents) error
 	return nil
 }
 
-func setIngnitionConfigOverride(config *igntypes.Config, override string) error {
+func setIgnitionConfigOverride(config *igntypes.Config, override string) error {
 	ignitionConfigOverride, _, err := v3_2.Parse([]byte(override))
 	if err != nil {
 		return fmt.Errorf("failed to parse ignition config override: %w", err)
